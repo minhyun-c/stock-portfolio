@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="주식 포트폴리오">
+<meta name="theme-color" content="#ffffff">
+<title>내 주식 포트폴리오</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f5;
+    color: #1a1a1a;
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+
+  .header {
+    background: #fff;
+    padding: 1rem 1rem 0.75rem;
+    border-bottom: 0.5px solid #e0e0e0;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+  .header h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
+  .header p { font-size: 13px; color: #888; margin-top: 2px; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 0.75rem;
+    background: #fff;
+    margin-bottom: 8px;
+  }
+  .metric {
+    background: #f8f8f8;
+    border-radius: 10px;
+    padding: 12px;
+  }
+  .metric-label { font-size: 11px; color: #999; margin-bottom: 4px; }
+  .metric-value { font-size: 18px; font-weight: 600; color: #1a1a1a; }
+  .metric-value.pos { color: #c0392b; }
+  .metric-value.neg { color: #2980b9; }
+
+  .account-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    background: #fff;
+    overflow-x: auto;
+    margin-bottom: 8px;
+  }
+  .account-tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    background: transparent;
+    color: #666;
+    white-space: nowrap;
+  }
+  .tab.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+  .section-title {
+    font-size: 13px;
+    color: #888;
+    padding: 0 12px 8px;
+    font-weight: 500;
+  }
+
+  .stock-list {
+    padding: 0 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 80px;
+  }
+
+  .stock-card {
+    background: #fff;
+    border: 1px solid #ececec;
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .stock-card.positive { border-left: 3px solid #c0392b; }
+  .stock-card.negative { border-left: 3px solid #2980b9; }
+  .stock-card.neutral  { border-left: 3px solid #ccc; }
+
+  .stock-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .stock-name { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+  .stock-meta { font-size: 11px; color: #999; margin-top: 2px; }
+
+  .stock-badge {
+    font-size: 12px;
+    padding: 3px 9px;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+  .badge-pos { background: #FDEDEC; color: #c0392b; }
+  .badge-neg { background: #EAF4FB; color: #2980b9; }
+  .badge-neu { background: #f0f0f0; color: #888; }
+
+  .stock-nums {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+  .num-label { font-size: 11px; color: #aaa; margin-bottom: 2px; }
+  .num-val   { font-size: 13px; font-weight: 500; color: #1a1a1a; }
+  .num-val.pos { color: #c0392b; }
+  .num-val.neg { color: #2980b9; }
+
+  .delete-btn {
+    background: none; border: none; cursor: pointer;
+    color: #ccc; font-size: 16px; padding: 2px 4px; margin-left: 6px;
+  }
+
+  .empty-msg {
+    text-align: center; padding: 3rem 1rem;
+    color: #bbb; font-size: 14px;
+  }
+
+  /* FAB 추가 버튼 */
+  .fab {
+    position: fixed;
+    bottom: 24px;
+    right: calc(50% - 228px);
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+    font-size: 26px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    z-index: 50;
+  }
+  @media (max-width: 480px) {
+    .fab { right: 20px; }
+  }
+
+  /* 모달 */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 20px 20px 0 0;
+    padding: 1.5rem 1.25rem 2.5rem;
+    width: 100%;
+    max-width: 480px;
+  }
+  .modal-title { font-size: 17px; font-weight: 600; margin-bottom: 1.25rem; }
+  .form-row { margin-bottom: 14px; }
+  .form-label { font-size: 12px; color: #888; margin-bottom: 5px; display: block; }
+  .form-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 15px;
+    background: #fafafa;
+    color: #1a1a1a;
+    -webkit-appearance: none;
+  }
+  .form-input:focus { outline: none; border-color: #1a1a1a; background: #fff; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .btn-row { display: flex; gap: 8px; margin-top: 1.25rem; }
+  .btn-cancel {
+    flex: 1; padding: 12px;
+    border: 1px solid #e0e0e0; border-radius: 10px;
+    background: transparent; color: #888; font-size: 15px; cursor: pointer;
+  }
+  .btn-save {
+    flex: 2; padding: 12px;
+    border: none; border-radius: 10px;
+    background: #1a1a1a; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+
+  /* 편집 모달 */
+  .edit-area { margin-top: 8px; display: none; }
+  .edit-area.show { display: block; }
+  .edit-input {
+    width: 80px; padding: 4px 6px; font-size: 13px;
+    border: 1px solid #ccc; border-radius: 6px; text-align: right;
+  }
+  .edit-btn {
+    font-size: 12px; padding: 4px 10px; margin-left: 6px;
+    border: 1px solid #1a1a1a; border-radius: 6px;
+    background: #1a1a1a; color: #fff; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>내 주식 포트폴리오</h1>
+  <p id="stock-count">보유 종목 수익률 현황</p>
+</div>
+
+<div class="summary-grid">
+  <div class="metric">
+    <div class="metric-label">총 투자금액</div>
+    <div class="metric-value" id="total-invest">-</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">평가손익</div>
+    <div class="metric-value" id="total-pnl">-</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">평가금액</div>
+    <div class="metric-value" id="total-eval">-</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">수익률</div>
+    <div class="metric-value" id="total-rate">-</div>
+  </div>
+</div>
+
+<div class="account-tabs" id="tabs"></div>
+<div class="section-title" id="section-label">전체 종목</div>
+<div class="stock-list" id="stock-list"></div>
+
+<button class="fab" onclick="openModal()" aria-label="종목 추가">
+  <i class="ti ti-plus"></i>
+</button>
+
+<!-- 추가 모달 -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title">종목 추가</div>
+    <div class="form-row">
+      <label class="form-label">종목명</label>
+      <input class="form-input" id="f-name" placeholder="예: 삼성전자" />
+    </div>
+    <div class="form-row">
+      <label class="form-label">계좌 유형</label>
+      <select class="form-input" id="f-account">
+        <option value="일반">일반계좌</option>
+        <option value="연금저축">연금저축</option>
+        <option value="ISA">ISA</option>
+        <option value="퇴직연금">퇴직연금(IRP)</option>
+      </select>
+    </div>
+    <div class="form-grid">
+      <div class="form-row">
+        <label class="form-label">매수 평균가 (원)</label>
+        <input class="form-input" id="f-buy" type="number" inputmode="numeric" placeholder="65000" />
+      </div>
+      <div class="form-row">
+        <label class="form-label">현재가 (원)</label>
+        <input class="form-input" id="f-cur" type="number" inputmode="numeric" placeholder="72000" />
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">보유 수량 (주)</label>
+      <input class="form-input" id="f-qty" type="number" inputmode="numeric" placeholder="10" />
+    </div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal()">취소</button>
+      <button class="btn-save" onclick="addStock()">추가하기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const ACCOUNT_COLORS = {
+    '일반': '#6C5CE7', '연금저축': '#00B894', 'ISA': '#E17055', '퇴직연금': '#0984E3'
+  };
+
+  let stocks = JSON.parse(localStorage.getItem('stocks') || '[]');
+  let nextId = parseInt(localStorage.getItem('nextId') || '1');
+  let activeTab = '전체';
+
+  function save() {
+    localStorage.setItem('stocks', JSON.stringify(stocks));
+    localStorage.setItem('nextId', String(nextId));
+  }
+
+  function fmt(n) {
+    return Math.round(n).toLocaleString('ko-KR') + '원';
+  }
+
+  function render() {
+    const filtered = activeTab === '전체' ? stocks : stocks.filter(s => s.account === activeTab);
+
+    let totalInvest = 0, totalEval = 0;
+    stocks.forEach(s => {
+      totalInvest += s.buy * s.qty;
+      totalEval += s.current * s.qty;
+    });
+    const totalPnl = totalEval - totalInvest;
+    const totalRate = totalInvest > 0 ? (totalPnl / totalInvest * 100) : 0;
+
+    document.getElementById('stock-count').textContent = `총 ${stocks.length}개 종목`;
+    document.getElementById('total-invest').textContent = fmt(totalInvest);
+
+    const pnlEl = document.getElementById('total-pnl');
+    pnlEl.textContent = (totalPnl >= 0 ? '+' : '') + fmt(totalPnl);
+    pnlEl.className = 'metric-value ' + (totalPnl > 0 ? 'pos' : totalPnl < 0 ? 'neg' : '');
+
+    document.getElementById('total-eval').textContent = fmt(totalEval);
+
+    const rateEl = document.getElementById('total-rate');
+    rateEl.textContent = (totalRate >= 0 ? '+' : '') + totalRate.toFixed(2) + '%';
+    rateEl.className = 'metric-value ' + (totalRate > 0 ? 'pos' : totalRate < 0 ? 'neg' : '');
+
+    const accounts = ['전체', ...new Set(stocks.map(s => s.account))];
+    document.getElementById('tabs').innerHTML = accounts.map(a =>
+      `<button class="tab${a === activeTab ? ' active' : ''}" onclick="setTab('${a}')">${a === '전체' ? '전체' : a}</button>`
+    ).join('');
+
+    document.getElementById('section-label').textContent =
+      activeTab === '전체' ? `전체 종목 (${stocks.length}개)` : `${activeTab} (${filtered.length}개)`;
+
+    const listEl = document.getElementById('stock-list');
+    if (filtered.length === 0) {
+      listEl.innerHTML = '<div class="empty-msg">+ 버튼을 눌러 종목을 추가하세요</div>';
+      return;
+    }
+
+    listEl.innerHTML = filtered.map(s => {
+      const invest = s.buy * s.qty;
+      const eval_ = s.current * s.qty;
+      const pnl = eval_ - invest;
+      const rate = (pnl / invest * 100);
+      const cls = pnl > 0 ? 'positive' : pnl < 0 ? 'negative' : 'neutral';
+      const badgeCls = pnl > 0 ? 'badge-pos' : pnl < 0 ? 'badge-neg' : 'badge-neu';
+      const sign = pnl >= 0 ? '+' : '';
+      const color = ACCOUNT_COLORS[s.account] || '#888';
+      return `<div class="stock-card ${cls}">
+        <div class="stock-top">
+          <div>
+            <div class="stock-name">${s.name}</div>
+            <div class="stock-meta" style="color:${color}">${s.account} · ${s.qty}주</div>
+          </div>
+          <div style="display:flex;align-items:center;">
+            <span class="stock-badge ${badgeCls}">${sign}${rate.toFixed(2)}%</span>
+            <button class="delete-btn" onclick="deleteStock(${s.id})" aria-label="삭제">
+              <i class="ti ti-trash"></i>
+            </button>
+          </div>
+        </div>
+        <div class="stock-nums">
+          <div>
+            <div class="num-label">매수가</div>
+            <div class="num-val">${s.buy.toLocaleString()}</div>
+          </div>
+          <div>
+            <div class="num-label">현재가</div>
+            <div class="num-val ${pnl>0?'pos':pnl<0?'neg':''}" 
+                 onclick="editCurrent(${s.id})" style="cursor:pointer;text-decoration:underline dotted #aaa">
+              ${s.current.toLocaleString()}
+            </div>
+            <div class="edit-area" id="edit-${s.id}">
+              <input class="edit-input" type="number" inputmode="numeric" id="edit-val-${s.id}" value="${s.current}" />
+              <button class="edit-btn" onclick="saveCurrent(${s.id})">저장</button>
+            </div>
+          </div>
+          <div>
+            <div class="num-label">평가손익</div>
+            <div class="num-val ${pnl>0?'pos':pnl<0?'neg':''}">${sign}${Math.round(pnl).toLocaleString()}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function setTab(tab) { activeTab = tab; render(); }
+
+  function openModal() { document.getElementById('modal-overlay').classList.add('show'); }
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('show');
+    ['f-name','f-buy','f-cur','f-qty'].forEach(id => document.getElementById(id).value = '');
+  }
+
+  function addStock() {
+    const name = document.getElementById('f-name').value.trim();
+    const account = document.getElementById('f-account').value;
+    const buy = parseFloat(document.getElementById('f-buy').value);
+    const cur = parseFloat(document.getElementById('f-cur').value);
+    const qty = parseInt(document.getElementById('f-qty').value);
+    if (!name || isNaN(buy) || isNaN(cur) || isNaN(qty) || qty <= 0) {
+      alert('모든 항목을 올바르게 입력해주세요.');
+      return;
+    }
+    stocks.push({ id: nextId++, name, account, buy, current: cur, qty });
+    save(); closeModal(); render();
+  }
+
+  function deleteStock(id) {
+    if (confirm('이 종목을 삭제할까요?')) {
+      stocks = stocks.filter(s => s.id !== id);
+      if (activeTab !== '전체' && !stocks.some(s => s.account === activeTab)) activeTab = '전체';
+      save(); render();
+    }
+  }
+
+  function editCurrent(id) {
+    document.querySelectorAll('.edit-area').forEach(el => el.classList.remove('show'));
+    document.getElementById('edit-' + id).classList.add('show');
+  }
+
+  function saveCurrent(id) {
+    const val = parseFloat(document.getElementById('edit-val-' + id).value);
+    if (!isNaN(val) && val > 0) {
+      const s = stocks.find(s => s.id === id);
+      if (s) { s.current = val; save(); render(); }
+    }
+  }
+
+  render();
+</script>
+</body>
+</html>
